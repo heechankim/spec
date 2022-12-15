@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #diff -c <(jq --sort-keys . prod_item-api.json) <(jq --sort-keys . prod2_item-api.json)
+#yq 6.\ ep-sync-cdc-delivery-info.yaml -o json | jq '.spec.template'
 
 if [[ -z $1 ]]; then
 	echo "1st argument is missing"
@@ -23,20 +24,21 @@ if [[ -z $4 ]]; then
 fi
 
 
+# script athena-prod-eks athena-prod item-api ./item-api.yaml
+
 echo "====================================================================="
 aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $1
 
-
-target1=$(kubectl get deploy $4 -n $3 -o=jsonpath={.spec.template})
-
-aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $2
+target1=$(kubectl get deploy $3 -n $2 -o=jsonpath={.spec.template})
 
 echo ""
-echo "Namespace: $3"
-echo "Target: $4"
+echo "Namespace: $2"
+echo "Target: $3"
+echo "With File Name: $4"
 echo "====================================================================="
 
-target2=$(kubectl get deploy $4 -n $3 -o=jsonpath={.spec.template})
+
+target2=$(yq $4 -o json | jq '.spec.template')
 
 
 echo ""
