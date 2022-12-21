@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# diff with files
+# target=
+# diff1=$(kubectl get deploy $target -o=jsonpath={.spec.template} | jq --sort-keys .)
+# diff2=$(yq <file> -o json | jq --sort-keys '.spec.template')
+
 #diff -c <(jq --sort-keys . prod_item-api.json) <(jq --sort-keys . prod2_item-api.json)
 
 if [[ -z $1 ]]; then
