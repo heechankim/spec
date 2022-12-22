@@ -13,20 +13,37 @@ EOC='\033[0m' # End of Color
 
 RESOURCE_TYPE=
 NAMESPACE=
+COLOR="true"
 
 function errorMessage {
-	echo -e "${ERROR}$1${EOC}"
+	if [[ $COLOR == "true" ]]; then
+		echo -e "${ERROR}$1${EOC}"	
+		return 0;
+	fi
+
+	echo $1
 }
 
 function informMessage {
-	echo -e "${INFO}$1${EOC}"
+	if [[ $COLOR == "true" ]]; then
+		echo -e "${INFO}$1${EOC}"	
+		return 0;
+	fi
+
+	echo $1
 }
 
 function commandWithColorOutput {
-	echo -en "${INFO}"
+	if [[ $COLOR == "true" ]]; then
+		echo -en "${INFO}"
+		echo -n "$1 "
+		eval $2
+		echo -en "${EOC}"
+		return 0;
+	fi
+	
 	echo -n "$1 "
 	eval $2
-	echo -en "${EOC}"
 }
 
 function getKubernetesResource {
@@ -36,28 +53,31 @@ function getKubernetesResource {
 ######################################################################################
 # Option settings
 ######################################################################################
-while getopts "t:n:" opt;
-do
-	case $opt in
-	t)
-	    RESOURCE_TYPE=$OPTARG
-	    ;;
-	n)
-	    NAMESPACE=$OPTARG
-	    ;;
-	?)
-	    exit -1;
-	esac
-done
+while getopts "t:n:c" opt;
+	do
+		case $opt in
+		t)
+			RESOURCE_TYPE=$OPTARG
+			;;
+		n)
+			NAMESPACE=$OPTARG
+			;;
+		c)
+			COLOR="false"
+			;;
+		?)
+			exit 2;
+		esac
+	done
 
-if ! (kubectl api-resources | grep -q $RESOURCE_TYPE); then
-	errorMessage "Wrong Argument: No Kubernetes Resource"
-	exit -1;
+if ! (kubectl api-resources | grep -q $RESOURCE_TYPE &> /dev/null); then
+	errorMessage "Option error [t]: Wrong Kubernetes Resource."
+	exit 2;
 fi
 
 if [[ -z "$NAMESPACE" ]]; then
-	errorMessage "Wrong Argument: Argument is missing"
-	exit -1;
+	errorMessage "Option error [n]: Namespace is missing."
+	exit 2;
 fi
 
 shift $((OPTIND-1))
@@ -65,17 +85,17 @@ shift $((OPTIND-1))
 if [[ -n "$NAMESPACE" ]]; then
 	if [[ -z $1 ]]; then
         	errorMessage "Original EKS Cluster name is missing"
-        	exit -1;
+        	exit 2;
 	fi
 
 	if [[ -z $2 ]]; then
         	errorMessage "Target EKS Cluster name is missing"
-        	exit -1;
+        	exit 2;
 	fi
 
 	if [[ -z $3 ]]; then
 			errorMessage "Resource is missing"
-			exit -1;
+			exit 2;
 	fi
 
 	ORIGIN_CLUSTER=$1
@@ -85,27 +105,27 @@ else
 
 	if [[ -z $1 ]]; then
        		errorMessage "Original EKS Cluster name is missing"
-        	exit -1;
+        	exit 2;
 	fi
 
 	if [[ -z $2 ]]; then
 			errorMessage "Original EKS Cluster Namespace is missing"
-			exit -1;
+			exit 2;
 	fi
 
 	if [[ -z $3 ]]; then
 			errorMessage "Target EKS Cluster name is missing"
-			exit -1;
+			exit 2;
 	fi
 
 	if [[ -z $4 ]]; then
 			errorMessage "Target EKS Cluster Namespace is missing"
-			exit -1;
+			exit 2;
 	fi
 
 	if [[ -z $5 ]]; then
 			errorMessage "Resource is missing"
-			exit -1;
+			exit 2;
 	fi
 
 	ORIGIN_CLUSTER=$1
