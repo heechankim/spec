@@ -50,9 +50,9 @@ do
 	esac
 done
 
-if [[ ! ("$RESOURCE_TYPE" == "deploy" || "$RESOURCE_TYPE" == "deployment" || "$RESOURCE_TYPE" == "cronjob") ]]; then 
-	errorMessage "Wrong Argument: Resource Type is invaild. Either deployment or cronjob"; 
-	exit -1; 
+if ! (kubectl api-resources | grep -q $RESOURCE_TYPE); then
+	errorMessage "Wrong Argument: No Kubernetes Resource"
+	exit -1;
 fi
 
 if [[ -z "$NAMESPACE" ]]; then
