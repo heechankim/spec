@@ -166,6 +166,11 @@ informMessage "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 echo ""
 echo ""
-colordiff -c <(echo $target1 | jq --sort-keys .) <(echo $target2 | jq --sort-keys .)
+
+if [[ $COLOR == "true" ]]; then
+	colordiff -c <(echo $target1 | jq --sort-keys .) <(echo $target2 | jq --sort-keys .)
+else
+	diff -c <(echo $target1 | jq --sort-keys .) <(echo $target2 | jq --sort-keys .)
+fi
 
 informMessage "================================================================================================================================="
