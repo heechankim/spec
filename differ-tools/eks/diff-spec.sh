@@ -12,7 +12,7 @@ INFO='\033[1;36m' # Cyan
 EOC='\033[0m' # End of Color
 
 RESOURCE_TYPE=
-K8S_NAMESPACE=
+NAMESPACE=
 
 function errorMessage {
 	echo -e "${ERROR}$1${EOC}"
@@ -29,80 +29,123 @@ function commandWithColorOutput {
 	echo -en "${EOC}"
 }
 
+function getKubernetesResource {
+	echo $(kubectl get $1 $2 -n $3 -o=jsonpath={.spec})
+}
+
 ######################################################################################
 # Option settings
 ######################################################################################
-while getopts "t:" opt;
+while getopts "t:n:" opt;
 do
 	case $opt in
 	t)
 	    RESOURCE_TYPE=$OPTARG
 	    ;;
-#	n)
-#	    echo -e "option n"
-#	    K8S_NAMESPACE=$OPTARG
-#	    if [[ $K8S_NAMESPACE -eq "" ]]; then echo "Option Argument is missing"; exit -1; fi
-#	    ;;
+	n)
+	    NAMESPACE=$OPTARG
+	    ;;
 	?)
 	    exit -1;
 	esac
 done
 
 if [[ ! ("$RESOURCE_TYPE" == "deploy" || "$RESOURCE_TYPE" == "deployment" || "$RESOURCE_TYPE" == "cronjob") ]]; then 
-	errorMessage "Resource Type is invaild. Either deployment or cronjob"; 
+	errorMessage "Wrong Argument: Resource Type is invaild. Either deployment or cronjob"; 
 	exit -1; 
+fi
+
+if [[ -z "$NAMESPACE" ]]; then
+	errorMessage "Wrong Argument: Argument is missing"
+	exit -1;
 fi
 
 shift $((OPTIND-1))
 
-if [[ -z $1 ]]; then
-        errorMessage "Old EKS Cluster name is missing"
-        exit -1;
+if [[ -n "$NAMESPACE" ]]; then
+	if [[ -z $1 ]]; then
+        	errorMessage "Original EKS Cluster name is missing"
+        	exit -1;
+	fi
+
+	if [[ -z $2 ]]; then
+        	errorMessage "Target EKS Cluster name is missing"
+        	exit -1;
+	fi
+
+	if [[ -z $3 ]]; then
+			errorMessage "Resource is missing"
+			exit -1;
+	fi
+
+	ORIGIN_CLUSTER=$1
+	TARGET_CLUSTER=$2
+	RESOURCE=$3
+else
+
+	if [[ -z $1 ]]; then
+       		errorMessage "Original EKS Cluster name is missing"
+        	exit -1;
+	fi
+
+	if [[ -z $2 ]]; then
+			errorMessage "Original EKS Cluster Namespace is missing"
+			exit -1;
+	fi
+
+	if [[ -z $3 ]]; then
+			errorMessage "Target EKS Cluster name is missing"
+			exit -1;
+	fi
+
+	if [[ -z $4 ]]; then
+			errorMessage "Target EKS Cluster Namespace is missing"
+			exit -1;
+	fi
+
+	if [[ -z $5 ]]; then
+			errorMessage "Resource is missing"
+			exit -1;
+	fi
+
+	ORIGIN_CLUSTER=$1
+	ORIGIN_NAMESPACE=$2
+	TARGET_CLUSTER=$3
+	TARGET_NAMESPACE=$4
+	RESOURCE=$5
+
 fi
-
-if [[ -z $2 ]]; then
-        errorMessage "New EKS Cluster name is missing"
-        exit -1;
-fi
-
-if [[ -z $3 ]]; then
-        errorMessage "Namespace is missing"
-        exit -1;
-fi
-
-if [[ -z $4 ]]; then
-        errorMessage "Resource is missing"
-        exit -1;
-fi
-
-OLD_CLUSTER=$1
-NEW_CLUSTER=$2
-NAMESPACE=$3
-TARGET=$4
-
 ######################################################################################
 # 1. Setting config file 
 # 2. Get Resource configuration
 # 3. Using Colordiff command
 ######################################################################################
 
-informMessage "====================================================================="
+informMessage "================================================================================================================================="
 
-commandWithColorOutput "Old Cluster:" "aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $OLD_CLUSTER"
+commandWithColorOutput "Original Cluster:" "aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $ORIGIN_CLUSTER"
 
-target1=$(kubectl get $RESOURCE_TYPE $TARGET -n $NAMESPACE -o=jsonpath={.spec})
+if [[ -n "$NAMESPACE" ]]; then
+	target1=$(getKubernetesResource $RESOURCE_TYPE $RESOURCE $NAMESPACE)
+else
+	target1=$(getKubernetesResource $RESOURCE_TYPE $RESOURCE $ORIGIN_NAMESPACE)
+fi
 
-commandWithColorOutput "New Cluster:" "aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $NEW_CLUSTER"
+commandWithColorOutput "Target Cluster:" "aws eks update-kubeconfig --profile aws_mfa --region ap-northeast-2 --name $TARGET_CLUSTER"
 
-informMessage "Namespace: $NAMESPACE"
-informMessage "Resource: $RESOURCE_TYPE"
-informMessage "Target: $TARGET"
-informMessage "====================================================================="
+if [[ -n "$NAMESPACE" ]]; then
+	target2=$(getKubernetesResource $RESOURCE_TYPE $RESOURCE $NAMESPACE)
+else
+	target2=$(getKubernetesResource $RESOURCE_TYPE $RESOURCE $TARGET_NAMESPACE)
+fi
 
-target2=$(kubectl get $RESOURCE_TYPE $TARGET -n $NAMESPACE -o=jsonpath={.spec})
-
+informMessage "Resource Type: $RESOURCE_TYPE"
+informMessage "Resource: $RESOURCE"
+informMessage "================================================================================================================================="
+informMessage "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
 echo ""
 echo ""
 colordiff -c <(echo $target1 | jq --sort-keys .) <(echo $target2 | jq --sort-keys .)
 
+informMessage "================================================================================================================================="
