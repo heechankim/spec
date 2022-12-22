@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SCRIPT="diff-spec.sh"
-COMMAND="diff-spec"
+SCRIPT="spec.sh"
+COMMAND="spec"
 INSTALL_DIR="/usr/local/bin"
 
 if [[ ! -d $INSTALL_DIR ]]; then
