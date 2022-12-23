@@ -75,10 +75,10 @@ if ! (kubectl api-resources | grep -q $RESOURCE_TYPE &> /dev/null); then
 	exit 2;
 fi
 
-if [[ -z "$NAMESPACE" ]]; then
-	errorMessage "Option error [n]: Namespace is missing."
-	exit 2;
-fi
+# if [[ -z "$NAMESPACE" ]]; then
+# 	errorMessage "Option error [n]: Namespace is missing."
+# 	exit 2;
+# fi
 
 shift $((OPTIND-1))
 
